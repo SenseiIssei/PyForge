@@ -14,10 +14,12 @@ import threading
 import tkinter as tk
 from tkinter import ttk
 
+import curriculum
 import drills
 import i18n
 import languages as LG
 import lessons as lessons_mod
+import lessons_multi
 import problems as problems_mod
 import problems_multi
 import runner
@@ -65,6 +67,8 @@ class LearnView(tk.Frame):
         self.app = app
         self.lesson = None
         self._rows: dict[str, tk.Frame] = {}
+        # the course for whichever programming language is active
+        self.entries = curriculum.lessons_for()
 
         paned = tk.PanedWindow(self, orient="horizontal", bg=T.BG, bd=0,
                                sashwidth=6, sashrelief="flat", showhandle=False)
@@ -170,7 +174,8 @@ class LearnView(tk.Frame):
                                   on_next=self.next_lesson, next_key="learn.next")
 
         self.show_tab("theory")
-        self.open_lesson(lessons_mod.LESSONS[0])
+        if self.entries:
+            self.open_lesson(self.entries[0])
 
     # ------------------------------------------------------------- list side
     def _build_list(self):
@@ -178,8 +183,8 @@ class LearnView(tk.Frame):
             child.destroy()
         self._rows.clear()
         current_section = None
-        for lesson in lessons_mod.LESSONS:
-            section = lessons_mod.section_of(lesson)
+        for entry in self.entries:
+            section = entry.section()
             if section != current_section:
                 current_section = section
                 tk.Label(self.list_frame, text=section.upper(), bg=T.PANEL,
@@ -190,16 +195,16 @@ class LearnView(tk.Frame):
             dot = tk.Label(row, text="○", bg=T.PANEL, fg=T.FAINT,
                            font=T.fonts()["small"])
             dot.pack(side="left", padx=(8, 6))
-            label = tk.Label(row, text=lessons_mod.field_of(lesson, "title"),
+            label = tk.Label(row, text=entry.title(),
                              bg=T.PANEL, fg=T.TEXT,
                              font=T.fonts()["small"], anchor="w")
             label.pack(side="left", fill="x", expand=True, pady=5)
             row.dot, row.label = dot, label  # type: ignore[attr-defined]
             for widget in (row, dot, label):
-                widget.bind("<Button-1>", lambda e, l=lesson: self.open_lesson(l))
+                widget.bind("<Button-1>", lambda e, l=entry: self.open_lesson(l))
                 widget.bind("<Enter>", lambda e, r=row: self._hover(r, True))
                 widget.bind("<Leave>", lambda e, r=row: self._hover(r, False))
-            self._rows[lesson.id] = row
+            self._rows[entry.id] = row
         self.refresh_marks()
 
     def _hover(self, row, entering):
@@ -212,16 +217,16 @@ class LearnView(tk.Frame):
 
     def refresh_marks(self):
         done = 0
-        for lesson in lessons_mod.LESSONS:
-            row = self._rows.get(lesson.id)
+        for entry in self.entries:
+            row = self._rows.get(entry.id)
             if not row:
                 continue
-            solved = self.app.progress.is_solved(lesson.task.id, "lesson")
+            solved = self.app.progress.is_solved(entry.task_id, "lesson")
             done += bool(solved)
             row.dot.configure(text="●" if solved else "○",
                               fg=T.GREEN if solved else T.FAINT)
         self.count_label.configure(
-            text=t("learn.done", done=done, total=len(lessons_mod.LESSONS)))
+            text=t("learn.done", done=done, total=len(self.entries)))
 
     def _select_row(self, lesson_id: str):
         for lid, row in self._rows.items():
@@ -233,29 +238,29 @@ class LearnView(tk.Frame):
             row.label.configure(bg=color, fg=T.TEXT if selected else T.MUTED)
 
     # ------------------------------------------------------------ open/tabs
-    def open_lesson(self, lesson):
-        self.lesson = lesson
-        self._select_row(lesson.id)
-        self.title_label.configure(text=lessons_mod.field_of(lesson, "title"))
-        index = lessons_mod.LESSONS.index(lesson) + 1
+    def open_lesson(self, entry):
+        self.lesson = entry
+        self._select_row(entry.id)
+        self.title_label.configure(text=entry.title())
+        index = self.entries.index(entry) + 1
         self.section_label.configure(
-            text=t("learn.position", section=lessons_mod.section_of(lesson),
-                   index=index, total=len(lessons_mod.LESSONS)))
+            text=t("learn.position", section=entry.section(),
+                   index=index, total=len(self.entries)))
 
         self.theory.configure(state="normal")
         self.theory.delete("1.0", "end")
-        self.theory.insert("end", lessons_mod.field_of(lesson, "theory").strip() + "\n")
-        takeaway = lessons_mod.field_of(lesson, "takeaway")
+        self.theory.insert("end", entry.theory().strip() + "\n")
+        takeaway = entry.takeaway()
         if takeaway:
             self.theory.insert("end", f"\n➜  {takeaway}\n", "takeaway")
         self.theory.configure(state="disabled")
         self.theory.yview_moveto(0)
 
-        self.example.set_code(lessons_mod.field_of(lesson, "example"))
+        self.example.set_code(entry.example())
         self.example_console.clear()
         self.example_console.writeln(t("learn.press_run"), "muted")
-        self.task_view.load(lessons_mod.task_of(lesson),
-                            solved=self.app.progress.is_solved(lesson.task.id, "lesson"))
+        self.task_view.load(entry.task(),
+                            solved=self.app.progress.is_solved(entry.task_id, "lesson"))
         self.show_tab("theory")
 
     def show_tab(self, which: str):
@@ -273,12 +278,12 @@ class LearnView(tk.Frame):
         inactive._bg, inactive._hover = T.PANEL, T.ELEV2
 
     def next_lesson(self):
-        idx = lessons_mod.LESSONS.index(self.lesson)
-        self.open_lesson(lessons_mod.LESSONS[(idx + 1) % len(lessons_mod.LESSONS)])
+        idx = self.entries.index(self.lesson)
+        self.open_lesson(self.entries[(idx + 1) % len(self.entries)])
 
     def prev_lesson(self):
-        idx = lessons_mod.LESSONS.index(self.lesson)
-        self.open_lesson(lessons_mod.LESSONS[idx - 1])
+        idx = self.entries.index(self.lesson)
+        self.open_lesson(self.entries[idx - 1])
 
     # --------------------------------------------------------------- example
     def run_example(self):
@@ -286,8 +291,12 @@ class LearnView(tk.Frame):
         self.example_console.clear()
         self.example_console.writeln(t("common.running") + "\n", "muted")
 
+        backend = LG.current()
+
         def work():
-            out, err, timed_out, secs = runner.run_script(source)
+            # The example is a whole program, so it goes through the same path
+            # as the Playground rather than the function-grading harness.
+            out, err, timed_out, secs = backend.run_program(source)
             self.after(0, lambda: self._example_done(out, err, timed_out, secs))
         threading.Thread(target=work, daemon=True).start()
 
@@ -305,7 +314,7 @@ class LearnView(tk.Frame):
 
     def reset_example(self):
         if self.lesson:
-            self.example.set_code(lessons_mod.field_of(self.lesson, "example"))
+            self.example.set_code(self.lesson.example())
 
     def _solved(self, task):
         gained = self.app.progress.solved(task.id, task.difficulty, task.topic, "lesson")
@@ -805,10 +814,18 @@ class ProgressView(tk.Frame):
     def _pretty(kind: str, tid: str) -> str:
         if kind == "lesson":
             lesson = lessons_mod.by_id(tid.replace("lesson_", ""))
-            return lessons_mod.field_of(lesson, "title") if lesson else tid
+            if lesson:
+                return lessons_mod.field_of(lesson, "title")
+            for other in lessons_multi.REGISTRY:      # a per-language lesson
+                if other.id == tid:
+                    return f"{LG.label(other.language)} · {i18n.pick(other.title, tid)}"
+            return tid
         if kind == "interview":
             problem = problems_mod.by_id(tid)
-            return problem.display_title if problem else tid
+            if problem:
+                return problem.display_title
+            multi = problems_multi.by_id(tid)
+            return multi.display_title if multi else tid
         return tid.replace("drill_", "").rsplit("_", 1)[0].replace("_", " ")
 
     def _reset(self):
@@ -986,11 +1003,21 @@ class App(tk.Tk):
             button=t("lang.detect"), command=self.recheck_toolchains)
 
         if is_python:
-            self.views["learn"] = LearnView(self.content, self)
             self.views["practice"] = PracticeView(self.content, self)
         else:
-            self.views["learn"] = self._python_only("lang.area_curriculum")
             self.views["practice"] = self._python_only("lang.area_drills")
+
+        if usable and curriculum.has_curriculum():
+            self.views["learn"] = LearnView(self.content, self)
+        elif not usable:
+            self.views["learn"] = NoticeView(
+                self.content,
+                t("lang.missing_title", label=backend.label),
+                t("lang.missing_body", label=backend.label,
+                  hint=backend.install_hint, button=t("lang.detect")),
+                button=t("lang.detect"), command=self.recheck_toolchains)
+        else:
+            self.views["learn"] = self._python_only("lang.area_curriculum")
 
         if usable:
             self.views["interview"] = InterviewView(self.content, self)

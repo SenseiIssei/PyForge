@@ -51,11 +51,18 @@ Nothing is downloaded at runtime and no network is used.
 
 ## What's inside
 
-### Learn — 17 lessons *(Python)*
-Theory written for someone who has not programmed before, but with the
-interview-relevant detail included (why `x in set` beats `x in list`, why `list.pop(0)`
-is O(n), why mutable default arguments bite). Each lesson has an editable, runnable
-example and a graded exercise with staged hints.
+### Learn — a course in every language
+* **Python: 17 lessons.** Theory written for someone who has not programmed before, but
+  with the interview-relevant detail included (why `x in set` beats `x in list`, why
+  `list.pop(0)` is O(n), why mutable default arguments bite).
+* **Every other language: 4 lessons** covering the syntax you need to read anything, the
+  collection you will reach for constantly, the language's own defining idea — Java's
+  classes, C#'s LINQ, Go's multiple returns and errors, Rust's ownership and borrowing,
+  C++'s references and `<algorithm>`, JavaScript's closures — and the string handling
+  interview questions actually demand.
+
+Every lesson has an editable, runnable example program and a graded exercise with staged
+hints. Both the examples and the exercises are executed by that language's real toolchain.
 
 ### Practice — 31 randomised drill generators *(Python)*
 Every drill is a *generator*: pick a topic, press the button, and you get a fresh
@@ -75,9 +82,11 @@ concept twenty times without ever replaying a memorised answer.
 Hidden tests run on submit, including deliberately large inputs so an O(n²) answer
 fails instead of quietly passing.
 
-### Playground *(Python)*
-Free editor with an **stdin box**, so you can practise the
-`list(map(int, input().split()))` style of judge exactly as Codility runs it.
+### Playground — in every language
+Free editor with an **stdin box**, so you can practise the read-from-stdin style of judge
+exactly as Codility runs it. Each language starts you with the same small program —
+read stdin, print something formatted, loop — so switching language shows you the same
+thing written idiomatically elsewhere.
 
 ### Progress
 XP, levels, day streak, per-topic breakdown, 14-day chart — in `progress.json`, local.
@@ -159,6 +168,9 @@ is useful on any machine.
 | `taskview.py` | the shared "solve a task" panel |
 | `languages/` | one execution backend per programming language |
 | `problems_multi.py` | problems that work in every language |
+| `lessons_multi.py` | the short course for each non-Python language |
+| `curriculum.py` | one interface over both kinds of course |
+| `languages/playground.py` | the starter program and build/run recipe per language |
 | `problems.py` · `problems_de.py` | the Python-only interview bank |
 | `lessons.py` · `lessons_de.py` | the Python curriculum |
 | `drills.py` | randomised generators (German inline — they interpolate values) |

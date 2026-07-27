@@ -13,6 +13,7 @@ import time
 
 import i18n
 import languages as LG
+import lessons_multi
 import problems_multi
 
 
@@ -32,8 +33,49 @@ def main() -> int:
             print(f"\n=== {backend.label}: skipped ({info})")
             continue
 
+        lessons = lessons_multi.for_language(backend.id)
         problems = problems_multi.for_language(backend.id)
-        print(f"\n=== {backend.label}  [{info}]  {len(problems)} problems")
+        print(f"\n=== {backend.label}  [{info}]  "
+              f"{len(lessons)} lessons, {len(problems)} problems")
+
+        # The live example is a whole program the learner will press Run on,
+        # so it has to compile and finish on its own.
+        for lesson in lessons:
+            began = time.perf_counter()
+            out, err, timed_out, _ = backend.run_program(lesson.example, "")
+            took = time.perf_counter() - began
+            checked += 1
+            if timed_out or err.strip() or not out.strip():
+                failures.append(f"{backend.label}/{lesson.id}: example "
+                                f"{'timed out' if timed_out else (err.strip()[:300] or 'printed nothing')}")
+                print(f"  FAIL  example {lesson.id:<27} {took:5.1f}s")
+                if err.strip():
+                    print("        " + err.strip().replace("\n", "\n        ")[:700])
+            else:
+                print(f"  ok    example {lesson.id:<27} {took:5.1f}s")
+
+        for lesson in lessons:
+            began = time.perf_counter()
+            outcome = backend.run(lesson.solution, lesson.func, lesson.sig,
+                                  lesson.cases)
+            took = time.perf_counter() - began
+            checked += 1
+            if outcome.ok:
+                print(f"  ok    lesson {lesson.id:<28} {outcome.passed}/"
+                      f"{outcome.total} {took:5.1f}s")
+                continue
+            reason = (outcome.build_error or outcome.runtime_error
+                      or ("timed out" if outcome.timed_out else ""))
+            failures.append(f"{backend.label}/{lesson.id}: "
+                            f"{outcome.passed}/{outcome.total} {reason[:400]}")
+            print(f"  FAIL  lesson {lesson.id:<28} {outcome.passed}/{outcome.total}")
+            if reason:
+                print("        " + reason.strip().replace("\n", "\n        ")[:700])
+            for c in outcome.cases:
+                if not c.passed:
+                    print(f"        case {c.index}: got={c.got!r} "
+                          f"expected={c.expected!r} error={c.error!r}")
+
         for problem in problems:
             source = problem.solutions[backend.id]
             began = time.perf_counter()

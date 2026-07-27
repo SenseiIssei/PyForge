@@ -1,6 +1,6 @@
 """Central place for colors, fonts and ttk styling.
 
-Everything visual in PyForge goes through here so the whole app stays
+Everything visual in CodeForge goes through here so the whole app stays
 consistent and a palette swap is a one-file change.
 """
 from __future__ import annotations

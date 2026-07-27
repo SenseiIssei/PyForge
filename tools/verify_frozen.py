@@ -1,7 +1,7 @@
 """Prove that a PyInstaller build can still run the user's code.
 
 In a frozen build there is no python.exe next to the app, so CodeForge relaunches
-its own executable with `--pyforge-child` and acts as the interpreter itself
+its own executable with `--codeforge-child` and acts as the interpreter itself
 (see runner.run_child). That path is easy to break and impossible to notice
 from the GUI alone, so CI checks it on every platform before publishing.
 

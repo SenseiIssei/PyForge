@@ -57,11 +57,31 @@ def main() -> int:
                     print(f"        case {c.index}: got={c.got!r} "
                           f"expected={c.expected!r} error={c.error!r}")
 
-    # the statements must exist in both languages
+    # ---- structural checks, no toolchain required -------------------------
+    import ast
+
     for problem in problems_multi.BANK:
         for language in ("en", "de"):
             if not problem.statement.get(language) or not problem.title.get(language):
                 failures.append(f"{problem.id}: missing '{language}' text")
+
+        # Arity: case(["a", "b"], ...) means ONE list argument, while
+        # case((x, y), ...) means two. Getting this wrong silently hands the
+        # whole list over as a single value — far easier to catch here than to
+        # debug in seven languages at once.
+        arity = len(problem.sig.params)
+        for index, entry in enumerate(problem.cases):
+            args = ast.literal_eval(entry["args"])
+            if not isinstance(args, tuple):
+                args = (args,)
+            if len(args) != arity:
+                failures.append(
+                    f"{problem.id}: case {index} passes {len(args)} argument(s), "
+                    f"but the signature declares {arity}")
+
+        for language_id in LG.ORDER:
+            if language_id not in problem.solutions:
+                failures.append(f"{problem.id}: no {LG.label(language_id)} solution")
 
     elapsed = time.perf_counter() - start
     print(f"\n{checked} solution runs in {elapsed:.0f}s")

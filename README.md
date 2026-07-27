@@ -60,9 +60,11 @@ statement with different numbers, different words and freshly computed tests. Gr
 concept twenty times without ever replaying a memorised answer.
 
 ### Interview — problems in every language
-* **11 multi-language problems** — one statement, generated starter code, a reference
-  solution in all seven languages. Kadane, Two Sum, binary search, two pointers,
-  hash maps, matrices.
+* **28 multi-language problems** — one statement, generated starter code, and a
+  reference solution in all seven languages. Two Sum, Kadane, binary search, sliding
+  window, two pointers, hash maps, prefix sums, bit tricks, the sieve of Eratosthenes,
+  matrices — plus Codility's BinaryGap, PassingCars, CyclicRotation, Dominator,
+  OddOccurrencesInArray and TapeEquilibrium.
 * **64 more when Python is selected** — the complete Codility lesson set (BinaryGap,
   MaxCounters, TapeEquilibrium, GenomicRangeQuery, Fish, StoneWall, Dominator …) plus
   the LeetCode patterns that keep coming up.

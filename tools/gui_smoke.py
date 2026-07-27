@@ -14,7 +14,7 @@ import traceback
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import app as pyforge  # noqa: E402
+import app as codeforge  # noqa: E402
 import i18n  # noqa: E402
 import languages as LG  # noqa: E402
 
@@ -22,7 +22,7 @@ errors: list[str] = []
 
 
 def visit_tabs(a) -> None:
-    for key in pyforge.App.NAV:
+    for key in codeforge.App.NAV:
         a.show(key)
         a.update()
 
@@ -77,7 +77,7 @@ def exercise_language(a, language_id: str) -> None:
 
 
 def run() -> None:
-    a = pyforge.App()
+    a = codeforge.App()
 
     def step():
         try:

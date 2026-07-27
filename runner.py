@@ -145,7 +145,7 @@ class TestReport:
         return len(self.cases)
 
 
-CHILD_FLAG = "--pyforge-child"
+CHILD_FLAG = "--codeforge-child"
 
 
 def is_frozen() -> bool:
@@ -230,7 +230,7 @@ def _popen_kwargs() -> dict:
 
 def run_script(source: str, stdin: str = "", timeout: float = TIMEOUT) -> tuple[str, str, bool, float]:
     """Run source as a plain script. Returns (stdout, stderr, timed_out, seconds)."""
-    with tempfile.TemporaryDirectory(prefix="pyforge_") as tmp:
+    with tempfile.TemporaryDirectory(prefix="codeforge_") as tmp:
         path = os.path.join(tmp, "your_code.py")
         with open(path, "w", encoding="utf-8") as fh:
             fh.write(source)
@@ -257,7 +257,7 @@ def run_tests(source: str, func: str, cases: list[dict],
                   "hidden": bool, "label": str}
     """
     report = TestReport()
-    with tempfile.TemporaryDirectory(prefix="pyforge_") as tmp:
+    with tempfile.TemporaryDirectory(prefix="codeforge_") as tmp:
         harness = os.path.join(tmp, "_harness.py")
         cfg_path = os.path.join(tmp, "_cfg.json")
         out_path = os.path.join(tmp, "_out.json")

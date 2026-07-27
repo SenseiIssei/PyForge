@@ -67,7 +67,7 @@ if sys.platform == "darwin":
         coll,
         name="CodeForge.app",
         icon=None,
-        bundle_identifier="dev.senseiissei.pyforge",
+        bundle_identifier="dev.senseiissei.codeforge",
         info_plist={
             "NSHighResolutionCapable": True,
             "LSMinimumSystemVersion": "11.0",

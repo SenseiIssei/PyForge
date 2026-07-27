@@ -1,4 +1,4 @@
-"""Language handling for PyForge.
+"""Language handling for CodeForge.
 
 The app ships in English and German. English is the source of truth: every
 lesson, drill and problem is authored in English, and the German version lives

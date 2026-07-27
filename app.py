@@ -1,4 +1,4 @@
-"""PyForge - learn Python, then grind interview problems. Run this file.
+"""CodeForge - learn Python, then grind interview problems. Run this file.
 
     python app.py
 
@@ -1125,7 +1125,7 @@ def main():
     if len(sys.argv) > 2 and sys.argv[1] == runner.CHILD_FLAG:
         raise SystemExit(runner.run_child())
     if sys.version_info < (3, 9):
-        raise SystemExit("PyForge needs Python 3.9 or newer.")
+        raise SystemExit("CodeForge needs Python 3.9 or newer.")
     app = App()
     app.mainloop()
 

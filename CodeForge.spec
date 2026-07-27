@@ -1,5 +1,5 @@
 # PyInstaller build recipe. Used by the release workflow and by
-#   pyinstaller PyForge.spec
+#   pyinstaller CodeForge.spec
 #
 # One-DIR, not one-file: the app relaunches its own executable as the
 # interpreter every time you run code or tests, and a one-file build would
@@ -35,7 +35,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="PyForge",
+    name="CodeForge",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -59,13 +59,13 @@ coll = COLLECT(
     strip=False,
     upx=False,
     upx_exclude=[],
-    name="PyForge",
+    name="CodeForge",
 )
 
 if sys.platform == "darwin":
     app = BUNDLE(
         coll,
-        name="PyForge.app",
+        name="CodeForge.app",
         icon=None,
         bundle_identifier="dev.senseiissei.pyforge",
         info_plist={

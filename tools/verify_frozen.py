@@ -1,6 +1,6 @@
 """Prove that a PyInstaller build can still run the user's code.
 
-In a frozen build there is no python.exe next to the app, so PyForge relaunches
+In a frozen build there is no python.exe next to the app, so CodeForge relaunches
 its own executable with `--pyforge-child` and acts as the interpreter itself
 (see runner.run_child). That path is easy to break and impossible to notice
 from the GUI alone, so CI checks it on every platform before publishing.
@@ -18,9 +18,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 CANDIDATES = [
-    os.path.join(ROOT, "dist", "PyForge", "PyForge.exe"),
-    os.path.join(ROOT, "dist", "PyForge", "PyForge"),
-    os.path.join(ROOT, "dist", "PyForge.app", "Contents", "MacOS", "PyForge"),
+    os.path.join(ROOT, "dist", "CodeForge", "CodeForge.exe"),
+    os.path.join(ROOT, "dist", "CodeForge", "CodeForge"),
+    os.path.join(ROOT, "dist", "CodeForge.app", "Contents", "MacOS", "CodeForge"),
 ]
 
 
@@ -28,7 +28,7 @@ def find_executable() -> str:
     for path in CANDIDATES:
         if os.path.isfile(path) and os.access(path, os.X_OK):
             return path
-    raise SystemExit("No built executable found — run pyinstaller PyForge.spec first.\n"
+    raise SystemExit("No built executable found — run pyinstaller CodeForge.spec first.\n"
                      "Looked in:\n  " + "\n  ".join(CANDIDATES))
 
 

@@ -11,6 +11,7 @@ import tkinter as tk
 from tkinter import ttk
 
 import i18n
+import languages as LG
 import runner
 import theme as T
 from editor import CodeEditor, Console
@@ -81,22 +82,18 @@ class TaskView(tk.Frame):
 
         stmt_wrap = tk.Frame(inner, bg=T.PANEL)
         stmt_wrap.pack(fill="both", expand=True, padx=4, pady=(0, 8))
-        hbar = ttk.Scrollbar(stmt_wrap, orient="horizontal")
-        hbar.pack(side="bottom", fill="x")
         sbar = ttk.Scrollbar(stmt_wrap, orient="vertical")
         sbar.pack(side="right", fill="y")
-        # wrap="none": statements are pre-formatted, word-wrap would destroy
-        # the alignment of the code examples inside them.
+        # Task statements are prose with short code lines, so word wrap reads
+        # better here than the horizontal scrolling the theory pane needs.
         self.statement = tk.Text(stmt_wrap, bg=T.PANEL, fg=T.TEXT, bd=0,
-                                 highlightthickness=0, wrap="none",
+                                 highlightthickness=0, wrap="word",
                                  font=T.fonts()["code_small"], padx=10, pady=4,
                                  insertwidth=0, yscrollcommand=sbar.set,
-                                 xscrollcommand=hbar.set,
                                  state="disabled", spacing1=1, spacing3=3,
                                  selectbackground="#33405c")
         self.statement.pack(side="left", fill="both", expand=True)
         sbar.configure(command=self.statement.yview)
-        hbar.configure(command=self.statement.xview)
         self.statement.tag_configure("code", foreground=T.SYN["string"],
                                      font=T.fonts()["code_small"])
         self.statement.tag_configure("hint", foreground=T.YELLOW)
@@ -123,18 +120,20 @@ class TaskView(tk.Frame):
             self.btn_next.pack(side="right")
 
         self.btn_test = T.Button(actions, t("task.run_tests"), self.run_tests,
-                                 variant="primary")
+                                 variant="primary", padx=11)
         self.btn_test.pack(side="left")
+        # "Run code" executes the file as a plain script, which only makes
+        # sense for Python here; the other languages need the generated harness.
         self.btn_run = T.Button(actions, t("task.run_code"), self.run_plain,
                                 variant="soft")
-        self.btn_run.pack(side="left", padx=(8, 0))
-        self.btn_hint = T.Button(actions, t("task.hint"), self.show_hint, variant="ghost")
+        self.actions_row = actions
+        self.btn_hint = T.Button(actions, t("task.hint"), self.show_hint, variant="ghost", padx=10)
         self.btn_hint.pack(side="left", padx=(8, 0))
         self.btn_solution = T.Button(actions, t("task.solution"), self.show_solution,
-                                     variant="ghost")
+                                     variant="ghost", padx=10)
         self.btn_solution.pack(side="left", padx=(8, 0))
         self.btn_reset = T.Button(actions, t("task.reset"), self.reset_code,
-                                  variant="ghost")
+                                  variant="ghost", padx=10)
         self.btn_reset.pack(side="left", padx=(8, 0))
 
         self.status = tk.Label(right, text="", bg=T.BG, fg=T.MUTED,
@@ -160,6 +159,10 @@ class TaskView(tk.Frame):
             self.solved_pill.pack_forget()
         self.complexity_label.configure(
             text=t("task.complexity", value=task.complexity) if task.complexity else "")
+
+        self.btn_run.pack_forget()
+        if task.sig is None or task.language == "python":
+            self.btn_run.pack(side="left", padx=(8, 0), after=self.btn_test)
 
         self._render_statement()
         self.editor.set_code(task.starter)
@@ -290,11 +293,89 @@ class TaskView(tk.Frame):
         self.editor.mark_error_line(None)
         self._set_busy(True)
 
+        if task.sig is not None:
+            backend = LG.get(task.language)
+
+            def work_multi():
+                outcome = backend.run(source, task.func, task.sig, task.cases)
+                self.after(0, lambda: self._show_multi(outcome))
+
+            threading.Thread(target=work_multi, daemon=True).start()
+            return
+
         def work():
             report = runner.run_tests(source, task.func, task.cases, task.checker_src)
             self.after(0, lambda: self._show_report(report))
 
         threading.Thread(target=work, daemon=True).start()
+
+    # ---------------------------------------------- multi-language reporting
+    def _show_multi(self, outcome) -> None:
+        """Render a languages/ RunOutcome — same layout as the Python path."""
+        self._set_busy(False)
+        task = self.task
+        if task is None:
+            return
+        c = self.console
+
+        if outcome.timed_out:
+            c.writeln(t("task.timeout_big"), "err")
+            c.writeln(t("task.timeout_why"), "muted")
+            self.status.configure(text=t("task.status_timeout"), fg=T.RED)
+            return
+
+        if outcome.build_error:
+            c.writeln(t("lang.build_failed"), "err")
+            c.writeln(outcome.build_error.rstrip(), "err")
+            self.status.configure(text=t("task.status_crash"), fg=T.RED)
+            return
+
+        if outcome.runtime_error and not outcome.cases:
+            c.writeln(t("task.crash_intro"), "err")
+            c.writeln(outcome.runtime_error.rstrip(), "err")
+            self.status.configure(text=t("task.status_crash"), fg=T.RED)
+            return
+
+        if outcome.stdout.strip():
+            c.writeln(t("task.your_prints"), "muted")
+            c.writeln(outcome.stdout.rstrip(), "muted")
+            c.writeln("")
+
+        for case in outcome.cases:
+            mark = t("task.pass") if case.passed else t("task.fail")
+            name = case.label or (t("task.hidden_test") if case.hidden
+                                  else t("task.test"))
+            c.write(f"{mark:>4}  ", "ok" if case.passed else "err")
+            c.write(f"#{case.index + 1} {name}\n", "muted")
+            if case.passed:
+                continue
+            if case.hidden and not case.error:
+                c.writeln(t("task.hidden_input"), "muted")
+            elif case.args:
+                c.writeln(t("task.input", value=pretty_args(case.args)), "muted")
+            if case.error:
+                c.writeln(t("task.crashed", value=case.error), "err")
+            else:
+                c.writeln(t("task.expected", value=case.expected), "warn")
+                c.writeln(t("task.got", value=case.got), "err")
+
+        c.writeln("")
+        if outcome.ok:
+            c.writeln(t("task.all_passed", n=outcome.total,
+                        ms=f"{outcome.seconds * 1000:.0f}"), "ok")
+            if task.complexity:
+                c.writeln(t("task.complexity_check", value=task.complexity), "info")
+            if task.notes:
+                c.writeln(f"\n   {task.notes}", "info")
+            self.status.configure(text=t("task.status_solved"), fg=T.GREEN)
+            if self.on_solved:
+                self.on_solved(task)
+        else:
+            c.writeln(t("task.some_passed", passed=outcome.passed,
+                        total=outcome.total), "err")
+            self.status.configure(
+                text=t("task.status_passing", passed=outcome.passed,
+                       total=outcome.total), fg=T.YELLOW)
 
     def _show_report(self, report: runner.TestReport) -> None:
         self._set_busy(False)

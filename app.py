@@ -16,8 +16,10 @@ from tkinter import ttk
 
 import drills
 import i18n
+import languages as LG
 import lessons as lessons_mod
 import problems as problems_mod
+import problems_multi
 import runner
 import theme as T
 from editor import CodeEditor, Console
@@ -25,7 +27,33 @@ from i18n import t
 from progress import Progress
 from taskview import TaskView
 
-APP_NAME = "PyForge"
+APP_NAME = "CodeForge"
+
+
+# ===========================================================================
+#  A full-panel message — used when a tab does not apply to the chosen
+#  programming language, or when its toolchain is missing.
+# ===========================================================================
+class NoticeView(tk.Frame):
+    def __init__(self, master, title: str, body: str,
+                 button: str = "", command=None):
+        super().__init__(master, bg=T.BG)
+        wrap = tk.Frame(self, bg=T.BG)
+        wrap.place(relx=0.5, rely=0.42, anchor="center")
+
+        card = T.card(wrap, bg=T.PANEL)
+        card.pack()
+        box = card.inner  # type: ignore[attr-defined]
+        tk.Label(box, text=title, bg=T.PANEL, fg=T.TEXT, font=T.fonts()["h2"],
+                 anchor="w", justify="left").pack(anchor="w", padx=30, pady=(26, 8))
+        tk.Label(box, text=body, bg=T.PANEL, fg=T.MUTED, font=T.fonts()["ui"],
+                 wraplength=520, justify="left").pack(anchor="w", padx=30,
+                                                      pady=(0, 20))
+        if button and command:
+            T.Button(box, button, command, variant="primary").pack(
+                anchor="w", padx=30, pady=(0, 26))
+        else:
+            tk.Frame(box, bg=T.PANEL, height=6).pack()
 
 
 # ===========================================================================
@@ -393,7 +421,7 @@ class InterviewView(tk.Frame):
 
         filters = tk.Frame(left, bg=T.PANEL)
         filters.pack(fill="x", padx=12, pady=(0, 8))
-        self.topic_values, topic_labels = i18n.topic_choices(problems_mod.TOPICS)
+        self.topic_values, topic_labels = i18n.topic_choices(self._all_topics())
         self.topic = ttk.Combobox(filters, state="readonly", width=15,
                                   values=topic_labels)
         self.topic.current(0)
@@ -423,7 +451,9 @@ class InterviewView(tk.Frame):
         # traced only now — the list widgets must exist before the first callback
         self.search_var.trace_add("write", lambda *_: self.refresh_list())
         self.refresh_list()
-        self.open_problem(problems_mod.BANK[0])
+        first = self._matching()
+        if first:
+            self.open_problem(first[0])
 
     # ------------------------------------------------------ search box helpers
     def _show_placeholder(self):
@@ -443,21 +473,43 @@ class InterviewView(tk.Frame):
             return ""
         return self.search_var.get().strip()
 
+    @staticmethod
+    def _all_topics() -> list[str]:
+        topics = set(problems_multi.TOPICS)
+        if LG.CURRENT == "python":
+            topics |= set(problems_mod.TOPICS)
+        return sorted(topics)
+
     def _filters(self) -> tuple[str, str]:
         return (self.topic_values[self.topic.current()],
                 self.diff_values[self.difficulty.current()])
+
+    def _matching(self) -> list:
+        """Problems for the active programming language.
+
+        Every language gets the multi-language bank; Python additionally gets
+        the large Python-only bank it started out with.
+        """
+        topic, difficulty = self._filters()
+        query = self.query()
+        items = list(problems_multi.filtered(LG.CURRENT, topic, difficulty, query))
+        if LG.CURRENT == "python":
+            items += list(problems_mod.filtered(topic, difficulty, query))
+        return items
 
     def refresh_list(self):
         for child in self.list_frame.winfo_children():
             child.destroy()
         self._rows.clear()
-        topic, difficulty = self._filters()
-        matches = problems_mod.filtered(topic, difficulty, self.query())
+        matches = self._matching()
         solved = sum(1 for p in matches
                      if self.app.progress.is_solved(p.id, "interview"))
+        total = len(problems_multi.for_language(LG.CURRENT))
+        if LG.CURRENT == "python":
+            total += len(problems_mod.BANK)
         self.count_label.configure(
             text=t("interview.solved", solved=solved, shown=len(matches),
-                   total=len(problems_mod.BANK)))
+                   total=total))
 
         current_topic = None
         for problem in sorted(matches,
@@ -511,13 +563,17 @@ class InterviewView(tk.Frame):
     def open_problem(self, problem):
         self.current = problem
         self._select(problem.id)
-        task = problem.build(self.rng)
+        if isinstance(problem, problems_multi.MultiProblem):
+            task = problem.build(LG.CURRENT, self.rng)
+        else:
+            task = problem.build(self.rng)
         self.task_view.load(task,
                             solved=self.app.progress.is_solved(problem.id, "interview"))
 
     def random_problem(self):
-        topic, difficulty = self._filters()
-        pool = problems_mod.filtered(topic, difficulty, self.query()) or problems_mod.BANK
+        pool = self._matching() or problems_multi.for_language(LG.CURRENT)
+        if not pool:
+            return
         unsolved = [p for p in pool
                     if not self.app.progress.is_solved(p.id, "interview")]
         self.open_problem(self.rng.choice(unsolved or pool))
@@ -832,6 +888,7 @@ class App(tk.Tk):
         T.apply_ttk_theme(self)
         self.progress = Progress()
         i18n.set_language(self.progress.data.get("language", "en"))
+        LG.set_current(self.progress.data.get("prog_language", LG.DEFAULT))
 
         self._xp_job = None
         self.views: dict[str, tk.Frame] = {}
@@ -860,7 +917,7 @@ class App(tk.Tk):
         top.pack(fill="x", padx=16, pady=(20, 4))
         logo = tk.Frame(top, bg=T.PANEL)
         logo.pack(side="left")
-        tk.Label(logo, text="Py", bg=T.PANEL, fg=T.ACCENT, padx=0,
+        tk.Label(logo, text="Code", bg=T.PANEL, fg=T.ACCENT, padx=0,
                  font=T.fonts()["logo"]).pack(side="left")
         tk.Label(logo, text="Forge", bg=T.PANEL, fg=T.TEXT, padx=0,
                  font=T.fonts()["logo"]).pack(side="left")
@@ -873,7 +930,33 @@ class App(tk.Tk):
             anchor="w", padx=20, pady=(0, 4))
         tk.Label(bar, text=t("shell.lang_hint"), bg=T.PANEL, fg=T.FAINT,
                  font=T.fonts()["tiny"], wraplength=170, justify="left").pack(
-            anchor="w", padx=20, pady=(0, 14))
+            anchor="w", padx=20, pady=(0, 12))
+
+        # ---------------------------------------------- programming language
+        tk.Label(bar, text=t("lang.section"), bg=T.PANEL, fg=T.ACCENT,
+                 font=T.fonts()["tiny"]).pack(anchor="w", padx=20, pady=(0, 4))
+
+        detected = LG.detect()
+        self.prog_values = list(LG.ORDER)
+        labels = []
+        for language_id in self.prog_values:
+            backend = LG.get(language_id)
+            usable = detected[language_id][0]
+            mark = "✓" if usable else "·"
+            labels.append(f"{mark}  {backend.label}")
+        self.prog_combo = ttk.Combobox(bar, state="readonly", values=labels, width=17)
+        self.prog_combo.current(self.prog_values.index(LG.CURRENT))
+        self.prog_combo.pack(anchor="w", padx=18, pady=(0, 3))
+        self.prog_combo.bind(
+            "<<ComboboxSelected>>",
+            lambda e: self.set_prog_language(self.prog_values[self.prog_combo.current()]))
+
+        usable, info = LG.current().available()
+        self.prog_status = tk.Label(
+            bar, text=info if usable else t("lang.missing"), bg=T.PANEL,
+            fg=T.GREEN if usable else T.YELLOW, font=T.fonts()["tiny"],
+            wraplength=170, justify="left")
+        self.prog_status.pack(anchor="w", padx=20, pady=(0, 14))
 
         for key in self.NAV:
             row = tk.Frame(bar, bg=T.PANEL, cursor="hand2")
@@ -918,16 +1001,56 @@ class App(tk.Tk):
                  bg=T.PANEL, fg=T.FAINT, font=T.fonts()["tiny"],
                  wraplength=170, justify="left").pack(anchor="w", padx=18, pady=(0, 16))
 
+    def _python_only(self, area_key: str) -> NoticeView:
+        return NoticeView(
+            self.content,
+            t("lang.python_only_title"),
+            t("lang.python_only_body", area=t(area_key), label=LG.current().label),
+            button=f"→ Python",
+            command=lambda: self.set_prog_language("python"))
+
     def _build_views(self):
-        self.views["learn"] = LearnView(self.content, self)
-        self.views["practice"] = PracticeView(self.content, self)
-        self.views["interview"] = InterviewView(self.content, self)
-        self.views["playground"] = PlaygroundView(self.content, self)
+        is_python = LG.CURRENT == "python"
+        usable, info = LG.current().available()
+
+        if is_python:
+            self.views["learn"] = LearnView(self.content, self)
+            self.views["practice"] = PracticeView(self.content, self)
+            self.views["playground"] = PlaygroundView(self.content, self)
+        else:
+            self.views["learn"] = self._python_only("lang.area_curriculum")
+            self.views["practice"] = self._python_only("lang.area_drills")
+            self.views["playground"] = self._python_only("lang.area_playground")
+
+        if usable:
+            self.views["interview"] = InterviewView(self.content, self)
+        else:
+            backend = LG.current()
+            self.views["interview"] = NoticeView(
+                self.content,
+                t("lang.missing_title", label=backend.label),
+                t("lang.missing_body", label=backend.label,
+                  hint=backend.install_hint, button=t("lang.detect")),
+                button=t("lang.detect"), command=self.recheck_toolchains)
+
         self.views["progress"] = ProgressView(self.content, self)
 
     def _bind_shortcuts(self):
         for i, key in enumerate(self.NAV, start=1):
             self.bind_all(f"<Control-Key-{i}>", lambda e, k=key: self.show(k))
+
+    # -------------------------------------------- programming language
+    def set_prog_language(self, language_id: str):
+        if language_id == LG.CURRENT:
+            return
+        LG.set_current(language_id)
+        self.progress.data["prog_language"] = LG.CURRENT
+        self.progress.save()
+        self.rebuild()
+
+    def recheck_toolchains(self):
+        LG.detect(refresh=True)
+        self.rebuild()
 
     # ------------------------------------------------------------- language
     def toggle_language(self):
@@ -989,9 +1112,11 @@ class App(tk.Tk):
 
     def refresh_all(self):
         self.update_xp_bar()
-        self.views["learn"].refresh_marks()
-        self.views["interview"].refresh_list()
-        self.views["progress"].refresh()
+        for key, method in (("learn", "refresh_marks"), ("interview", "refresh_list"),
+                            ("progress", "refresh")):
+            view = self.views.get(key)
+            if hasattr(view, method):
+                getattr(view, method)()
 
 
 def main():

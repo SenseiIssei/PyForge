@@ -1,5 +1,5 @@
 @echo off
-rem Double-click this to start PyForge.
+rem Double-click this to start CodeForge.
 rem Uses pythonw so no console window hangs around behind the app.
 cd /d "%~dp0"
 start "" pythonw app.py

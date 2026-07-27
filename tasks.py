@@ -21,6 +21,10 @@ class Task:
     checker_src: str = ""           # optional: defines check(args, got) -> bool
     source: str = "drill"           # drill | lesson | interview
     notes: str = ""                 # extra explanation shown after solving
+    # Multi-language tasks carry a type signature; when it is set the task is
+    # graded by a languages/ backend instead of the Python-only runner.
+    sig: object = None
+    language: str = "python"
 
     def visible_cases(self) -> list[dict]:
         return [c for c in self.cases if not c.get("hidden")]

@@ -9,6 +9,7 @@ STORE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "progress.json"
 
 DEFAULT = {
     "language": "en",
+    "prog_language": "python",
     "xp": 0,
     "streak": 0,
     "best_streak": 0,
@@ -127,8 +128,10 @@ class Progress:
         return max(0, self.xp - lo), max(1, hi - lo)
 
     def reset(self) -> None:
-        language = self.data.get("language", "en")
+        # a reset is about XP and solved marks, not about preferences
+        keep = {key: self.data.get(key, DEFAULT[key])
+                for key in ("language", "prog_language")}
         self.data = json.loads(json.dumps(DEFAULT))
-        self.data["language"] = language   # a reset is about XP, not preferences
+        self.data.update(keep)
         self.touch_day()
         self.save()

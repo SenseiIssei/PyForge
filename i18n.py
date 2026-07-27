@@ -34,8 +34,8 @@ def pick(en, de):
 # ===========================================================================
 UI: dict[str, tuple[str, str]] = {
     # ---------------------------------------------------------------- shell
-    "app.tagline": ("Python from zero to Codility-ready",
-                    "Python von null bis Codility-fit"),
+    "app.tagline": ("Learn to code, then pass the interview",
+                    "Programmieren lernen, Interview bestehen"),
     "nav.learn": ("Learn", "Lernen"),
     "nav.learn.sub": ("Read, run, then solve", "Lesen, ausführen, lösen"),
     "nav.practice": ("Practice", "Üben"),
@@ -249,6 +249,38 @@ UI: dict[str, tuple[str, str]] = {
                       "result?",
                       "Alles liefert None — hast du vergessen, das Ergebnis mit "
                       "`return` zurückzugeben?"),
+
+    # ---------------------------------------------------- programming language
+    "lang.section": ("LANGUAGE", "SPRACHE"),
+    "lang.ready": ("ready", "bereit"),
+    "lang.missing": ("not installed", "nicht installiert"),
+    "lang.bundled": ("built in", "eingebaut"),
+    "lang.detect": ("Re-check toolchains", "Toolchains neu prüfen"),
+    "lang.missing_title": ("{label} is not installed", "{label} ist nicht installiert"),
+    "lang.missing_body": ("CodeForge runs your code with the real {label} toolchain, "
+                          "and it could not find it on this machine.\n\n{hint}\n\n"
+                          "Once it is installed, press “{button}”.",
+                          "CodeForge führt deinen Code mit der echten "
+                          "{label}-Toolchain aus und hat sie auf diesem Rechner "
+                          "nicht gefunden.\n\n{hint}\n\nWenn sie installiert ist, "
+                          "drück auf „{button}“."),
+    "lang.python_only_title": ("Only available for Python so far",
+                               "Bisher nur für Python verfügbar"),
+    "lang.python_only_body": ("This part of CodeForge — the {area} — is written for "
+                              "Python at the moment. The Interview tab already works "
+                              "in {label}, with the same problems and generated "
+                              "starter code.\n\nSwitch the language back to Python to "
+                              "use this tab.",
+                              "Dieser Teil von CodeForge — {area} — gibt es zurzeit "
+                              "nur für Python. Der Interview-Tab funktioniert in "
+                              "{label} bereits, mit denselben Aufgaben und erzeugtem "
+                              "Startcode.\n\nStell die Sprache auf Python zurück, um "
+                              "diesen Tab zu nutzen."),
+    "lang.area_curriculum": ("lesson curriculum", "der Lehrplan"),
+    "lang.area_drills": ("randomised drills", "die Zufallsübungen"),
+    "lang.area_playground": ("playground", "die Spielwiese"),
+    "lang.build_failed": ("🔨  It did not compile:", "🔨  Es lässt sich nicht übersetzen:"),
+    "lang.compiled_in": ("compiled and ran in {ms} ms", "übersetzt und ausgeführt in {ms} ms"),
 
     # --------------------------------------------------------------- shared
     "common.all_topics": ("All topics", "Alle Themen"),

@@ -20,7 +20,7 @@ jobs:
 
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: "3.14"
 
       - name: Install Tk (needed for the UI smoke test)
         run: sudo apt-get update && sudo apt-get install -y tk xvfb
@@ -45,23 +45,23 @@ jobs:
         include:
           - os: windows-latest
             label: windows-x64
-            archive: PyForge-windows-x64.zip
+            archive: CodeForge-windows-x64.zip
           - os: ubuntu-latest
             label: linux-x64
-            archive: PyForge-linux-x64.tar.gz
+            archive: CodeForge-linux-x64.tar.gz
           - os: macos-latest
             label: macos-arm64
-            archive: PyForge-macos-arm64.zip
+            archive: CodeForge-macos-arm64.zip
           # No macos-13 (Intel) job: those runners are being retired and queue
           # indefinitely, which would block every release. Intel Mac users can
-          # build locally with `pyinstaller PyForge.spec` or run from source.
+          # build locally with `pyinstaller CodeForge.spec` or run from source.
 
     steps:
       - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: "3.14"
 
       - name: Install Tk (Linux)
         if: runner.os == 'Linux'
@@ -74,7 +74,7 @@ jobs:
         run: python -m pip install --upgrade pip pyinstaller
 
       - name: Build
-        run: pyinstaller --noconfirm PyForge.spec
+        run: pyinstaller --noconfirm CodeForge.spec
 
       - name: Verify the frozen build can actually run user code
         shell: bash
@@ -82,15 +82,15 @@ jobs:
 
       - name: Package (Windows)
         if: runner.os == 'Windows'
-        run: Compress-Archive -Path dist/PyForge/* -DestinationPath ${{ matrix.archive }}
+        run: Compress-Archive -Path dist/CodeForge/* -DestinationPath ${{ matrix.archive }}
 
       - name: Package (Linux)
         if: runner.os == 'Linux'
-        run: tar -czf ${{ matrix.archive }} -C dist PyForge
+        run: tar -czf ${{ matrix.archive }} -C dist CodeForge
 
       - name: Package (macOS)
         if: runner.os == 'macOS'
-        run: ditto -c -k --keepParent dist/PyForge.app ${{ matrix.archive }}
+        run: ditto -c -k --keepParent dist/CodeForge.app ${{ matrix.archive }}
 
       - uses: actions/upload-artifact@v7
         with:
@@ -120,6 +120,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create "${GITHUB_REF_NAME}" \
-            --title "PyForge ${GITHUB_REF_NAME}" \
+            --title "CodeForge ${GITHUB_REF_NAME}" \
             --generate-notes \
             artifacts/*

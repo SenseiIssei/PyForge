@@ -52,9 +52,9 @@ jobs:
           - os: macos-latest
             label: macos-arm64
             archive: PyForge-macos-arm64.zip
-          - os: macos-13
-            label: macos-x64
-            archive: PyForge-macos-x64.zip
+          # No macos-13 (Intel) job: those runners are being retired and queue
+          # indefinitely, which would block every release. Intel Mac users can
+          # build locally with `pyinstaller PyForge.spec` or run from source.
 
     steps:
       - uses: actions/checkout@v7

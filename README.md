@@ -19,9 +19,12 @@ inklusive aller Lektionen, Aufgabentexte und Tipps.*
 ## Download
 
 Grab the latest build for your system from the
-[Releases page](https://github.com/SenseiIssei/PyForge/releases) — Windows, Linux and
-macOS (Apple Silicon and Intel). Unpack it and run `PyForge`. No Python installation
-needed; the app carries its own interpreter and uses it to run the code you write.
+[Releases page](https://github.com/SenseiIssei/PyForge/releases) — Windows x64, Linux x64
+and macOS (Apple Silicon). Unpack it and run `PyForge`. No Python installation needed;
+the app carries its own interpreter and uses it to run the code you write.
+
+On an **Intel Mac** run it from source, or build it yourself in one command (see below) —
+GitHub is retiring its Intel macOS runners, so there is no prebuilt x86_64 archive.
 
 ## Run from source
 

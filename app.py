@@ -589,47 +589,6 @@ class InterviewView(tk.Frame):
 # ===========================================================================
 #  PLAYGROUND
 # ===========================================================================
-STARTER_EN = '''# Scratch space. Anything you write here runs in a real Python process.
-# Ctrl+Enter runs it. Whatever you print shows up below.
-#
-# The "Input (stdin)" box on the right feeds input() - exactly like a judge does.
-
-import sys
-
-data = sys.stdin.read().split()
-if data:
-    nums = list(map(int, data))
-    print("read:", nums)
-    print("sum:", sum(nums), "max:", max(nums))
-else:
-    print("Nothing on stdin - try putting '3 1 4 1 5' in the input box.")
-
-print()
-for i in range(1, 6):
-    print(f"{i:>3} squared is {i*i:>4}")
-'''
-
-STARTER_DE = '''# Freier Platz. Alles, was du hier schreibst, laeuft in einem echten
-# Python-Prozess. Strg+Enter fuehrt es aus, deine Ausgaben erscheinen unten.
-#
-# Das Feld "Eingabe (stdin)" rechts fuettert input() - genau wie ein Pruefsystem.
-
-import sys
-
-daten = sys.stdin.read().split()
-if daten:
-    nums = list(map(int, daten))
-    print("gelesen:", nums)
-    print("Summe:", sum(nums), "Maximum:", max(nums))
-else:
-    print("Nichts auf stdin - tipp mal '3 1 4 1 5' in das Eingabefeld.")
-
-print()
-for i in range(1, 6):
-    print(f"{i:>3} zum Quadrat ist {i*i:>4}")
-'''
-
-
 class PlaygroundView(tk.Frame):
     def __init__(self, master, app: "App"):
         super().__init__(master, bg=T.BG)
@@ -639,7 +598,7 @@ class PlaygroundView(tk.Frame):
         head.pack(fill="x", padx=18, pady=(14, 6))
         tk.Label(head, text=t("play.title"), bg=T.BG, fg=T.TEXT,
                  font=T.fonts()["h1"]).pack(anchor="w")
-        tk.Label(head, text=t("play.sub"),
+        tk.Label(head, text=t("play.sub", label=LG.current().label),
                  bg=T.BG, fg=T.MUTED, font=T.fonts()["small"],
                  justify="left").pack(anchor="w")
 
@@ -651,7 +610,7 @@ class PlaygroundView(tk.Frame):
         paned.add(left, minsize=420, width=720, stretch="always")
         self.editor = CodeEditor(left, height=20, on_run=self.run)
         self.editor.pack(fill="both", expand=True)
-        self.editor.set_code(STARTER_DE if i18n.is_de() else STARTER_EN)
+        self.editor.set_code(LG.current().playground_source(i18n.LANG))
 
         row = tk.Frame(left, bg=T.BG)
         row.pack(fill="x", pady=8)
@@ -686,8 +645,10 @@ class PlaygroundView(tk.Frame):
         self.console.writeln(t("common.running") + "\n", "muted")
         self.timing.configure(text="")
 
+        backend = LG.current()
+
         def work():
-            out, err, timed_out, secs = runner.run_script(source, stdin)
+            out, err, timed_out, secs = backend.run_program(source, stdin)
             self.after(0, lambda: self._done(out, err, timed_out, secs))
         threading.Thread(target=work, daemon=True).start()
 
@@ -700,7 +661,8 @@ class PlaygroundView(tk.Frame):
             self.console.write(out)
         if err:
             self.console.writeln(err, "err")
-            line = runner.error_line(err)
+            # only Python reports a line number we can map back to the editor
+            line = runner.error_line(err) if LG.CURRENT == "python" else None
             if line:
                 self.editor.mark_error_line(line)
         if not out and not err:
@@ -1015,20 +977,27 @@ class App(tk.Tk):
         is_python = LG.CURRENT == "python"
         usable, info = LG.current().available()
 
+        backend = LG.current()
+        missing = NoticeView(
+            self.content,
+            t("lang.missing_title", label=backend.label),
+            t("lang.missing_body", label=backend.label,
+              hint=backend.install_hint, button=t("lang.detect")),
+            button=t("lang.detect"), command=self.recheck_toolchains)
+
         if is_python:
             self.views["learn"] = LearnView(self.content, self)
             self.views["practice"] = PracticeView(self.content, self)
-            self.views["playground"] = PlaygroundView(self.content, self)
         else:
             self.views["learn"] = self._python_only("lang.area_curriculum")
             self.views["practice"] = self._python_only("lang.area_drills")
-            self.views["playground"] = self._python_only("lang.area_playground")
 
         if usable:
             self.views["interview"] = InterviewView(self.content, self)
+            self.views["playground"] = PlaygroundView(self.content, self)
         else:
-            backend = LG.current()
-            self.views["interview"] = NoticeView(
+            self.views["interview"] = missing
+            self.views["playground"] = NoticeView(
                 self.content,
                 t("lang.missing_title", label=backend.label),
                 t("lang.missing_body", label=backend.label,

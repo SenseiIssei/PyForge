@@ -183,14 +183,15 @@ UI: dict[str, dict[str, str]] = {
     "play.title": {"en": "Playground", "de": "Spielwiese", "fr": "Bac à sable",
                    "es": "Área de pruebas"},
     "play.sub": {
-        "en": "A real Python process. Endless loops get killed after 10 seconds, "
-              "so experiment freely.",
-        "de": "Ein echter Python-Prozess. Endlosschleifen werden nach 10 Sekunden "
-              "beendet — probier also ruhig alles aus.",
-        "fr": "Un vrai processus Python. Les boucles infinies sont arrêtées après "
-              "10 secondes, alors expérimentez librement.",
-        "es": "Un proceso de Python real. Los bucles infinitos se detienen tras "
-              "10 segundos, así que experimenta con libertad."},
+        "en": "A real {label} program, compiled and run by the real toolchain. "
+              "Endless loops get killed, so experiment freely.",
+        "de": "Ein echtes {label}-Programm, von der echten Toolchain übersetzt und "
+              "ausgeführt. Endlosschleifen werden beendet — probier ruhig alles aus.",
+        "fr": "Un vrai programme {label}, compilé et exécuté par la vraie chaîne "
+              "d'outils. Les boucles infinies sont arrêtées, expérimentez librement.",
+        "es": "Un programa {label} de verdad, compilado y ejecutado por las "
+              "herramientas reales. Los bucles infinitos se detienen; experimenta "
+              "con libertad."},
     "play.run": {"en": "▶  Run   (Ctrl+Enter)", "de": "▶  Ausführen   (Strg+Enter)",
                  "fr": "▶  Exécuter   (Ctrl+Entrée)", "es": "▶  Ejecutar   (Ctrl+Intro)"},
     "play.clear_out": {"en": "Clear output", "de": "Ausgabe leeren",

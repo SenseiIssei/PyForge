@@ -28,6 +28,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import time
 from dataclasses import dataclass, field
 
 SENTINEL = "@@CF"
@@ -253,6 +254,56 @@ class Backend:
 
     def harness(self, func: str, sig: Sig, values: list[tuple[tuple, object]]) -> str:
         raise NotImplementedError
+
+    # ------------------------------------------------------------ playground
+    def playground_source(self, ui_language: str = "en") -> str:
+        """The free-form starter program shown in the Playground."""
+        from . import playground
+        return playground.source_for(self.id, ui_language)
+
+    def run_program(self, source: str, stdin: str = "",
+                    timeout: float = 90.0) -> tuple[str, str, bool, float]:
+        """Compile and run a complete program with its own entry point.
+
+        Returns (stdout, stderr, timed_out, seconds) — the same shape the
+        Python-only runner uses, so the Playground treats every language alike.
+        """
+        from . import playground
+
+        started = time.perf_counter()
+        recipe = playground.spec(self.id)
+        if recipe is None:
+            return "", f"No playground support for {self.label} yet.", False, 0.0
+
+        work = os.path.join(self.workspace(), "playground")
+        shutil.rmtree(work, ignore_errors=True)
+        os.makedirs(work, exist_ok=True)
+
+        with open(os.path.join(work, recipe["file"]), "w", encoding="utf-8") as handle:
+            handle.write(source)
+        for name, content in (recipe.get("extra", lambda b, w: {})(self, work)).items():
+            with open(os.path.join(work, name), "w", encoding="utf-8") as handle:
+                handle.write(content)
+
+        binary = "prog.exe" if os.name == "nt" else "prog"
+        env = None
+        if recipe.get("env"):
+            env = dict(os.environ)
+            env.update(recipe["env"](self, work))
+
+        build = recipe["build"](self, work, binary)
+        if build:
+            code, out, err, timed_out = self._exec(build, work, timeout, env=env)
+            if timed_out:
+                return "", "", True, time.perf_counter() - started
+            if code != 0:
+                return "", (err or out).strip(), False, time.perf_counter() - started
+
+        code, out, err, timed_out = self._exec(
+            recipe["run"](self, work, binary), work, timeout, stdin=stdin, env=env)
+        if timed_out:
+            return "", "", True, time.perf_counter() - started
+        return out, err, False, time.perf_counter() - started
 
     # --------------------------------------------------------------- running
     def run(self, user_code: str, func: str, sig: Sig, cases: list[dict],

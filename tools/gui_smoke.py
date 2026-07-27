@@ -75,6 +75,13 @@ def exercise_language(a, language_id: str) -> None:
         assert task.starter.strip(), f"empty starter for {language_id}"
         assert task.language == language_id
 
+    play = a.views["playground"]
+    if hasattr(play, "editor"):                  # toolchain present
+        source = play.editor.get_code()
+        assert source.strip(), f"empty playground program for {language_id}"
+        assert "no playground template" not in source, \
+            f"no playground template for {language_id}"
+
 
 def run() -> None:
     a = codeforge.App()

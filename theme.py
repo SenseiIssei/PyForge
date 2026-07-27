@@ -187,67 +187,148 @@ class Button(tk.Label):
             self.configure(cursor="arrow", bg=PANEL, fg=FAINT)
 
 
-class FlagButton(tk.Frame):
-    """Language switch. Draws the flags itself on a Canvas, because Windows
-    does not render regional-indicator flag emoji as actual flags."""
+def draw_flag(canvas: tk.Canvas, code: str, x: int = 1, y: int = 1,
+              w: int = 24, h: int = 15) -> None:
+    """Paint a small flag onto a Canvas.
 
-    def __init__(self, master, get_lang, command, bg: str = PANEL):
+    Drawn by hand rather than using emoji: Windows renders regional-indicator
+    pairs as two boxed letters, not as flags.
+    """
+    if code == "de":
+        for i, colour in enumerate(("#000000", "#DD0000", "#FFCE00")):
+            canvas.create_rectangle(x, y + i * h / 3, x + w, y + (i + 1) * h / 3,
+                                    fill=colour, outline="")
+    elif code == "fr":
+        for i, colour in enumerate(("#002395", "#FFFFFF", "#ED2939")):
+            canvas.create_rectangle(x + i * w / 3, y, x + (i + 1) * w / 3, y + h,
+                                    fill=colour, outline="")
+    elif code == "es":
+        # red / yellow / red, the yellow band twice as tall
+        canvas.create_rectangle(x, y, x + w, y + h / 4, fill="#AA151B", outline="")
+        canvas.create_rectangle(x, y + h / 4, x + w, y + 3 * h / 4,
+                                fill="#F1BF00", outline="")
+        canvas.create_rectangle(x, y + 3 * h / 4, x + w, y + h,
+                                fill="#AA151B", outline="")
+    else:                                                   # "en" -> Union Jack
+        canvas.create_rectangle(x, y, x + w, y + h, fill="#012169", outline="")
+        for width, colour in ((4, "#FFFFFF"), (2, "#C8102E")):
+            canvas.create_line(x, y, x + w, y + h, fill=colour, width=width)
+            canvas.create_line(x + w, y, x, y + h, fill=colour, width=width)
+        for width, colour in ((6, "#FFFFFF"), (3, "#C8102E")):
+            canvas.create_line(x + w / 2, y, x + w / 2, y + h, fill=colour, width=width)
+            canvas.create_line(x, y + h / 2, x + w, y + h / 2, fill=colour, width=width)
+    canvas.create_rectangle(x, y, x + w, y + h, outline=BORDER)
+
+
+class FlagButton(tk.Frame):
+    """Shows the active interface language and opens a picker when clicked."""
+
+    def __init__(self, master, get_lang, on_choose, languages, names,
+                 title: str = "Language", bg: str = PANEL):
         super().__init__(master, bg=bg, cursor="hand2")
         self.get_lang = get_lang
-        self.command = command
+        self.on_choose = on_choose
+        self.languages = list(languages)
+        self.names = dict(names)
+        self.title_text = title
         self._bg = bg
+        self._popup = None
 
         self.canvas = tk.Canvas(self, width=26, height=17, bg=bg,
                                 highlightthickness=0, bd=0)
         self.canvas.pack(side="left")
         self.label = tk.Label(self, text="", bg=bg, fg=MUTED, font=fonts()["tiny"],
-                              padx=5)
+                              padx=4)
         self.label.pack(side="left")
+        self.arrow = tk.Label(self, text="▾", bg=bg, fg=FAINT, font=fonts()["tiny"])
+        self.arrow.pack(side="left")
 
-        for widget in (self, self.canvas, self.label):
-            widget.bind("<Button-1>", lambda e: self.command())
+        for widget in (self, self.canvas, self.label, self.arrow):
+            widget.bind("<Button-1>", lambda e: self.open())
             widget.bind("<Enter>", lambda e: self._hover(True))
             widget.bind("<Leave>", lambda e: self._hover(False))
         self.refresh()
 
     def _hover(self, entering: bool):
-        color = ELEV2 if entering else self._bg
-        self.configure(bg=color)
-        self.canvas.configure(bg=color)
-        self.label.configure(bg=color, fg=TEXT if entering else MUTED)
+        colour = ELEV2 if entering else self._bg
+        for widget in (self, self.canvas, self.label, self.arrow):
+            widget.configure(bg=colour)
+        self.label.configure(fg=TEXT if entering else MUTED)
 
     def refresh(self):
-        """Show the flag of the language clicking would switch TO."""
-        target = "de" if self.get_lang() == "en" else "en"
+        current = self.get_lang()
         self.canvas.delete("all")
-        if target == "de":
-            self._draw_german()
-            self.label.configure(text="DE")
-        else:
-            self._draw_uk()
-            self.label.configure(text="EN")
+        draw_flag(self.canvas, current)
+        self.label.configure(text=current.upper())
 
-    def _draw_german(self):
-        c, w, h = self.canvas, 24, 15
-        x, y = 1, 1
-        c.create_rectangle(x, y, x + w, y + h / 3, fill="#000000", outline="")
-        c.create_rectangle(x, y + h / 3, x + w, y + 2 * h / 3, fill="#DD0000", outline="")
-        c.create_rectangle(x, y + 2 * h / 3, x + w, y + h, fill="#FFCE00", outline="")
-        c.create_rectangle(x, y, x + w, y + h, outline=BORDER)
+    # -------------------------------------------------------------- picker
+    def open(self):
+        if self._popup is not None and self._popup.winfo_exists():
+            self._close()
+            return
+        popup = tk.Toplevel(self)
+        self._popup = popup
+        popup.withdraw()
+        popup.overrideredirect(True)
+        popup.configure(bg=BORDER)
 
-    def _draw_uk(self):
-        c, w, h = self.canvas, 24, 15
-        x, y = 1, 1
-        c.create_rectangle(x, y, x + w, y + h, fill="#012169", outline="")
-        # white diagonals, then red diagonals on top
-        for width, color in ((4, "#FFFFFF"), (2, "#C8102E")):
-            c.create_line(x, y, x + w, y + h, fill=color, width=width)
-            c.create_line(x + w, y, x, y + h, fill=color, width=width)
-        # white cross, then red cross
-        for width, color in ((6, "#FFFFFF"), (3, "#C8102E")):
-            c.create_line(x + w / 2, y, x + w / 2, y + h, fill=color, width=width)
-            c.create_line(x, y + h / 2, x + w, y + h / 2, fill=color, width=width)
-        c.create_rectangle(x, y, x + w, y + h, outline=BORDER)
+        inner = tk.Frame(popup, bg=PANEL)
+        inner.pack(padx=1, pady=1)
+        tk.Label(inner, text=self.title_text.upper(), bg=PANEL, fg=ACCENT,
+                 font=fonts()["tiny"], anchor="w").pack(fill="x", padx=12, pady=(9, 5))
+
+        current = self.get_lang()
+        for code in self.languages:
+            row = tk.Frame(inner, bg=ELEV2 if code == current else PANEL,
+                           cursor="hand2")
+            row.pack(fill="x", padx=4, pady=1)
+            flag = tk.Canvas(row, width=26, height=17, bg=row["bg"],
+                             highlightthickness=0, bd=0)
+            draw_flag(flag, code)
+            flag.pack(side="left", padx=(8, 8), pady=4)
+            name = tk.Label(row, text=self.names.get(code, code), bg=row["bg"],
+                            fg=TEXT if code == current else MUTED,
+                            font=fonts()["small"], anchor="w")
+            name.pack(side="left", fill="x", expand=True, padx=(0, 16))
+            tick = tk.Label(row, text="✓" if code == current else " ", bg=row["bg"],
+                            fg=GREEN, font=fonts()["small"])
+            tick.pack(side="right", padx=(0, 10))
+
+            parts = (row, flag, name, tick)
+            for widget in parts:
+                widget.bind("<Button-1>", lambda e, c=code: self._choose(c))
+                widget.bind("<Enter>",
+                            lambda e, p=parts: [w.configure(bg=ELEV) for w in p])
+                widget.bind("<Leave>",
+                            lambda e, p=parts, c=code: [
+                                w.configure(bg=ELEV2 if c == current else PANEL)
+                                for w in p])
+        tk.Frame(inner, bg=PANEL, height=6).pack()
+
+        popup.update_idletasks()
+        x = self.winfo_rootx()
+        y = self.winfo_rooty() + self.winfo_height() + 4
+        screen_w = popup.winfo_screenwidth()
+        x = min(x, screen_w - popup.winfo_width() - 8)
+        popup.geometry(f"+{max(4, x)}+{y}")
+        popup.deiconify()
+        popup.lift()
+        popup.bind("<FocusOut>", lambda e: self._close())
+        popup.bind("<Escape>", lambda e: self._close())
+        popup.focus_set()
+
+    def _close(self):
+        if self._popup is not None:
+            try:
+                self._popup.destroy()
+            except tk.TclError:
+                pass
+            self._popup = None
+
+    def _choose(self, code: str):
+        self._close()
+        if code != self.get_lang():
+            self.on_choose(code)
 
 
 def hline(master, color: str = BORDER, bg: str | None = None) -> tk.Frame:

@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 
 import i18n
 import languages as LG
+import problems_multi_i18n
 from languages import BOOL, FLOAT, INT, L, STR, Sig
 from tasks import Task, case
 
@@ -34,12 +35,21 @@ class MultiProblem:
     complexity: str = ""
 
     # ------------------------------------------------------------ helpers
-    def _pick(self, table: dict, fallback=""):
+    def _pick(self, table: dict, fallback="", field_name: str = ""):
+        """Active language, else English.
+
+        French and Spanish live in problems_multi_i18n so the definitions here
+        stay readable; they win over the inline tables when present.
+        """
+        if field_name:
+            extra = problems_multi_i18n.EXTRA.get(self.id, {}).get(i18n.LANG)
+            if extra and extra.get(field_name):
+                return extra[field_name]
         return table.get(i18n.LANG) or table.get("en") or fallback
 
     @property
     def display_title(self) -> str:
-        return self._pick(self.title, self.id)
+        return self._pick(self.title, self.id, "title")
 
     def supports(self, language_id: str) -> bool:
         return language_id in self.solutions
@@ -52,16 +62,16 @@ class MultiProblem:
             id=self.id,
             title=self.display_title,
             func=self.func,
-            statement=self._pick(self.statement).strip(),
+            statement=self._pick(self.statement, "", "statement").strip(),
             starter=backend.starter(self.func, self.sig),
             cases=list(self.cases),
-            hints=list(self._pick(self.hints, []) or []),
+            hints=list(self._pick(self.hints, [], "hints") or []),
             solution=self.solutions.get(language_id, ""),
             difficulty=self.difficulty,
             topic=self.topic,
             complexity=i18n.complexity(self.complexity),
             source="interview",
-            notes=self._pick(self.notes),
+            notes=self._pick(self.notes, "", "notes"),
             sig=self.sig,
             language=language_id,
         )

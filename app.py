@@ -922,7 +922,9 @@ class App(tk.Tk):
         tk.Label(logo, text="Forge", bg=T.PANEL, fg=T.TEXT, padx=0,
                  font=T.fonts()["logo"]).pack(side="left")
 
-        self.flag = T.FlagButton(top, lambda: i18n.LANG, self.toggle_language)
+        self.flag = T.FlagButton(top, lambda: i18n.LANG, self.set_ui_language,
+                                 i18n.LANGUAGES, i18n.LANGUAGE_NAMES,
+                                 title=t("shell.choose_language"))
         self.flag.pack(side="right", pady=3)
 
         tk.Label(bar, text=t("app.tagline"), bg=T.PANEL, fg=T.FAINT,
@@ -1053,11 +1055,18 @@ class App(tk.Tk):
         self.rebuild()
 
     # ------------------------------------------------------------- language
-    def toggle_language(self):
-        i18n.set_language("de" if i18n.LANG == "en" else "en")
+    def set_ui_language(self, code: str):
+        if code == i18n.LANG:
+            return
+        i18n.set_language(code)
         self.progress.data["language"] = i18n.LANG
         self.progress.save()
         self.rebuild()
+
+    def toggle_language(self):
+        """Step to the next interface language — kept for the keyboard/tests."""
+        order = list(i18n.LANGUAGES)
+        self.set_ui_language(order[(order.index(i18n.LANG) + 1) % len(order)])
 
     def rebuild(self):
         """Tear the UI down and build it again in the new language."""

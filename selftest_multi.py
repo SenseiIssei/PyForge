@@ -60,10 +60,20 @@ def main() -> int:
     # ---- structural checks, no toolchain required -------------------------
     import ast
 
+    import problems_multi_i18n
+
     for problem in problems_multi.BANK:
         for language in ("en", "de"):
             if not problem.statement.get(language) or not problem.title.get(language):
                 failures.append(f"{problem.id}: missing '{language}' text")
+
+        # French and Spanish live in the separate translation module. A missing
+        # one is not fatal — it falls back to English — but it should be visible.
+        extra = problems_multi_i18n.EXTRA.get(problem.id, {})
+        for language in ("fr", "es"):
+            entry = extra.get(language)
+            if not entry or not entry.get("title") or not entry.get("statement"):
+                failures.append(f"{problem.id}: no '{language}' translation")
 
         # Arity: case(["a", "b"], ...) means ONE list argument, while
         # case((x, y), ...) means two. Getting this wrong silently hands the

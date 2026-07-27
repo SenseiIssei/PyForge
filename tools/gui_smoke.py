@@ -81,26 +81,39 @@ def run() -> None:
 
     def step():
         try:
-            start_ui = i18n.LANG
-            start_prog = LG.CURRENT
-
-            # Do not inherit whatever language progress.json was left on.
+            # Do not inherit whatever progress.json was left on.
             a.set_prog_language("python")
+            a.set_ui_language("en")
             a.update()
-            exercise_python(a)
 
-            a.toggle_language()
+            # every interface language, with the Python content
+            for code in i18n.LANGUAGES:
+                a.set_ui_language(code)
+                a.update()
+                assert i18n.LANG == code, f"interface did not switch to {code}"
+                exercise_python(a)
+
+            # the language picker itself must open and close cleanly
+            a.flag.open()
             a.update()
-            assert i18n.LANG != start_ui, "interface language did not change"
-            exercise_python(a)
+            a.flag._close()
+            a.update()
 
+            # every programming language, with the interface in German
+            a.set_ui_language("de")
+            a.update()
             for language_id in LG.ORDER:
                 exercise_language(a, language_id)
 
-            a.set_prog_language(start_prog)
-            a.toggle_language()
+            # ... and in Spanish, to prove the content falls back cleanly
+            a.set_ui_language("es")
             a.update()
-            assert i18n.LANG == start_ui and LG.CURRENT == start_prog
+            for language_id in LG.ORDER:
+                exercise_language(a, language_id)
+
+            a.set_prog_language("python")
+            a.set_ui_language("en")
+            a.update()
             visit_tabs(a)
         except Exception:
             errors.append(traceback.format_exc())
@@ -121,5 +134,5 @@ if __name__ == "__main__":
         for err in errors:
             print(err)
         sys.exit(1)
-    print("GUI smoke test OK — both interface languages, all "
+    print(f"GUI smoke test OK — {len(i18n.LANGUAGES)} interface languages, "
           f"{len(LG.ORDER)} programming languages")

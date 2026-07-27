@@ -10,14 +10,17 @@ built for a Codility screen, useful for any of them.
 Rust and C++ all work: you get the same problem, starter code generated for that
 language's type system, and your solution is compiled and graded by the real toolchain.
 
-**English and German.** The flag button switches the entire interface *and* every
-lesson, problem statement and hint.
+**English, German, French and Spanish.** The flag button switches the whole interface,
+plus every multi-language problem statement, hint and note. The Python-only curriculum
+and drills are English and German; anything without a translation falls back to English
+rather than breaking.
 
 Written in Python with **zero third-party dependencies** — standard library and tkinter
 only. Nothing to `pip install`.
 
-*Die ganze App gibt es auch auf Deutsch, und die Programmiersprache lässt sich direkt
-in der App umschalten.*
+*Die ganze App gibt es auf Deutsch, und die Programmiersprache lässt sich direkt in der
+App umschalten. · Toute l'application existe aussi en français. · La aplicación completa
+también está en español.*
 
 ## Download
 
@@ -160,7 +163,8 @@ is useful on any machine.
 | `lessons.py` · `lessons_de.py` | the Python curriculum |
 | `drills.py` | randomised generators (German inline — they interpolate values) |
 | `runner.py` | the Python-only subprocess runner |
-| `i18n.py` | interface language, topic and difficulty names |
+| `i18n.py` | interface language (EN/DE/FR/ES), topic and difficulty names |
+| `problems_multi_i18n.py` | French and Spanish text for the multi-language bank |
 | `progress.py` | XP, streaks and preferences |
 
 ## Adding a language

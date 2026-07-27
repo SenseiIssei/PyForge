@@ -1,0 +1,125 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # ---------------------------------------------------------------- tests
+  selftest:
+    name: content self-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Tk (needed for the UI smoke test)
+        run: sudo apt-get update && sudo apt-get install -y tk xvfb
+
+      - name: Every reference solution must pass its own tests (English)
+        run: python selftest.py 2 en
+
+      - name: ... and German, plus translation coverage
+        run: python selftest.py 2 de
+
+      - name: UI smoke test
+        run: xvfb-run -a python tools/gui_smoke.py
+
+  # --------------------------------------------------------------- builds
+  build:
+    name: ${{ matrix.label }}
+    needs: selftest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            label: windows-x64
+            archive: PyForge-windows-x64.zip
+          - os: ubuntu-latest
+            label: linux-x64
+            archive: PyForge-linux-x64.tar.gz
+          - os: macos-latest
+            label: macos-arm64
+            archive: PyForge-macos-arm64.zip
+          - os: macos-13
+            label: macos-x64
+            archive: PyForge-macos-x64.zip
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Tk (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y tk
+
+      - name: tkinter must be importable
+        run: python -c "import tkinter; print('Tk', tkinter.TkVersion)"
+
+      - name: Install PyInstaller
+        run: python -m pip install --upgrade pip pyinstaller
+
+      - name: Build
+        run: pyinstaller --noconfirm PyForge.spec
+
+      - name: Verify the frozen build can actually run user code
+        shell: bash
+        run: python tools/verify_frozen.py
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        run: Compress-Archive -Path dist/PyForge/* -DestinationPath ${{ matrix.archive }}
+
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
+        run: tar -czf ${{ matrix.archive }} -C dist PyForge
+
+      - name: Package (macOS)
+        if: runner.os == 'macOS'
+        run: ditto -c -k --keepParent dist/PyForge.app ${{ matrix.archive }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.label }}
+          path: ${{ matrix.archive }}
+          if-no-files-found: error
+
+  # -------------------------------------------------------------- release
+  release:
+    name: publish release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List what we are about to publish
+        run: ls -lh artifacts
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "PyForge ${GITHUB_REF_NAME}" \
+            --generate-notes \
+            artifacts/*

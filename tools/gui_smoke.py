@@ -82,6 +82,22 @@ def exercise_language(a, language_id: str) -> None:
         assert "no playground template" not in source, \
             f"no playground template for {language_id}"
 
+    practice = a.views["practice"]
+    if hasattr(practice, "new_task"):
+        for _ in range(4):
+            practice.new_task()
+            a.update()
+        drill = practice.task_view.task
+        assert drill is not None, f"no drill generated for {language_id}"
+        assert drill.solution.strip(), f"drill without a {language_id} solution"
+
+    learn = a.views["learn"]
+    if hasattr(learn, "entries") and learn.entries:
+        for _ in range(len(learn.entries)):
+            learn.next_lesson()
+            a.update()
+        assert learn.lesson.example().strip(), f"empty example for {language_id}"
+
 
 def run() -> None:
     a = codeforge.App()

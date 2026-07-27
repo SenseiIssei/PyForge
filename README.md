@@ -64,10 +64,14 @@ Nothing is downloaded at runtime and no network is used.
 Every lesson has an editable, runnable example program and a graded exercise with staged
 hints. Both the examples and the exercises are executed by that language's real toolchain.
 
-### Practice — 31 randomised drill generators *(Python)*
+### Practice — randomised drills in every language
 Every drill is a *generator*: pick a topic, press the button, and you get a fresh
 statement with different numbers, different words and freshly computed tests. Grind one
 concept twenty times without ever replaying a memorised answer.
+
+Python has 31 generators; the other six languages share a portable set of 6. The
+randomised parameter is baked into the reference solution for each language, so the
+drill is genuinely re-generated rather than translated.
 
 ### Interview — problems in every language
 * **28 multi-language problems** — one statement, generated starter code, and a
@@ -169,6 +173,7 @@ is useful on any machine.
 | `languages/` | one execution backend per programming language |
 | `problems_multi.py` | problems that work in every language |
 | `lessons_multi.py` | the short course for each non-Python language |
+| `drills_multi.py` | randomised drill generators that work in every language |
 | `curriculum.py` | one interface over both kinds of course |
 | `languages/playground.py` | the starter program and build/run recipe per language |
 | `problems.py` · `problems_de.py` | the Python-only interview bank |

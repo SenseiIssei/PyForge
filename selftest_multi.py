@@ -8,9 +8,11 @@ CodeForge is meant to work on a machine that has only some of them.
 """
 from __future__ import annotations
 
+import random
 import sys
 import time
 
+import drills_multi
 import i18n
 import languages as LG
 import lessons_multi
@@ -75,6 +77,27 @@ def main() -> int:
                 if not c.passed:
                     print(f"        case {c.index}: got={c.got!r} "
                           f"expected={c.expected!r} error={c.error!r}")
+
+        # Randomised drills: build a fresh instance of each and grade it.
+        LG.set_current(backend.id)
+        rng = random.Random(20260727)
+        for spec in drills_multi.REGISTRY:
+            task = spec.build(rng)
+            began = time.perf_counter()
+            outcome = backend.run(task.solution, task.func, task.sig, task.cases)
+            took = time.perf_counter() - began
+            checked += 1
+            if outcome.ok:
+                print(f"  ok    drill  {spec.id:<28} {outcome.passed}/"
+                      f"{outcome.total} {took:5.1f}s")
+                continue
+            reason = (outcome.build_error or outcome.runtime_error
+                      or ("timed out" if outcome.timed_out else ""))
+            failures.append(f"{backend.label}/drill {spec.id}: "
+                            f"{outcome.passed}/{outcome.total} {reason[:400]}")
+            print(f"  FAIL  drill  {spec.id:<28} {outcome.passed}/{outcome.total}")
+            if reason:
+                print("        " + reason.strip().replace("\n", "\n        ")[:700])
 
         for problem in problems:
             source = problem.solutions[backend.id]

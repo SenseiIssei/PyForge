@@ -16,6 +16,7 @@ from tkinter import ttk
 
 import curriculum
 import drills
+import drills_multi
 import i18n
 import languages as LG
 import lessons as lessons_mod
@@ -338,7 +339,8 @@ class PracticeView(tk.Frame):
 
         tk.Label(inner, text=t("practice.topic"), bg=T.PANEL, fg=T.MUTED,
                  font=T.fonts()["small"]).pack(side="left")
-        self.topic_values, topic_labels = i18n.topic_choices(drills.TOPICS)
+        self.topic_values, topic_labels = i18n.topic_choices(
+            self._generator().TOPICS)
         self.topic = ttk.Combobox(inner, state="readonly", width=18,
                                   values=topic_labels)
         self.topic.current(0)
@@ -368,10 +370,15 @@ class PracticeView(tk.Frame):
         self.task_view.pack(fill="both", expand=True)
         self.new_task()
 
+    @staticmethod
+    def _generator():
+        """Python keeps its 31 generators; the others use the portable set."""
+        return drills if LG.CURRENT == "python" else drills_multi
+
     def new_task(self):
         topic = self.topic_values[self.topic.current()]
         difficulty = self.diff_values[self.difficulty.current()]
-        task = drills.generate(topic, difficulty, self.rng)
+        task = self._generator().generate(topic, difficulty, self.rng)
         self.task_view.load(task)
         self._update_stats()
 
@@ -991,9 +998,7 @@ class App(tk.Tk):
             command=lambda: self.set_prog_language("python"))
 
     def _build_views(self):
-        is_python = LG.CURRENT == "python"
-        usable, info = LG.current().available()
-
+        usable, _ = LG.current().available()
         backend = LG.current()
         missing = NoticeView(
             self.content,
@@ -1002,10 +1007,15 @@ class App(tk.Tk):
               hint=backend.install_hint, button=t("lang.detect")),
             button=t("lang.detect"), command=self.recheck_toolchains)
 
-        if is_python:
+        if usable:
             self.views["practice"] = PracticeView(self.content, self)
         else:
-            self.views["practice"] = self._python_only("lang.area_drills")
+            self.views["practice"] = NoticeView(
+                self.content,
+                t("lang.missing_title", label=backend.label),
+                t("lang.missing_body", label=backend.label,
+                  hint=backend.install_hint, button=t("lang.detect")),
+                button=t("lang.detect"), command=self.recheck_toolchains)
 
         if usable and curriculum.has_curriculum():
             self.views["learn"] = LearnView(self.content, self)

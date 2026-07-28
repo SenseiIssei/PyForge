@@ -22,6 +22,9 @@ only. Nothing to `pip install`.
 App umschalten. · Toute l'application existe aussi en français. · La aplicación completa
 también está en español.*
 
+Where it goes next is written up in [ROADMAP.md](ROADMAP.md), along with the things
+worth knowing before changing anything.
+
 ## Download
 
 Get the latest build from the
